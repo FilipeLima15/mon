@@ -1,0 +1,16 @@
+name: Alerta de Ouro
+on:
+  schedule:
+    - cron: '0 13-23 * * *' # Isso roda de hora em hora das 10h às 20h (Brasília)
+  workflow_dispatch:
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: pip install requests
+      - env:
+          GOLD_API_KEY: ${{ secrets.GOLD_API_KEY }}
+          PUSH_USER: ${{ secrets.PUSH_USER }}
+          PUSH_TOKEN: ${{ secrets.PUSH_TOKEN }}
+        run: python monitor.py
