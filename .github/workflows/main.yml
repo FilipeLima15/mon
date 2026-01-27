@@ -1,10 +1,11 @@
 name: Alerta de Ouro JS
 on:
   schedule:
-    # Horários UTC: 13h, 18h, 23h
-    # Equivalente BRT: 10h, 15h, 20h
-    - cron: '0 13,18,23 * * *'
+    - cron: '0 13,18,23 * * *' # 10h, 15h, 20h BRT
   workflow_dispatch:
+
+permissions:
+  contents: write  # <--- PERMISSÃO CRÍTICA PARA SALVAR O JSON
 
 jobs:
   run-monitor:
@@ -27,3 +28,12 @@ jobs:
           PUSH_USER: ${{ secrets.PUSH_USER }}
           PUSH_TOKEN: ${{ secrets.PUSH_TOKEN }}
         run: node monitor.js
+
+      # Passo extra: Salvar o arquivo dados.json atualizado no repositório
+      - name: Commit e Push das alterações
+        run: |
+          git config --global user.name "Bot Monitor"
+          git config --global user.email "bot@github.com"
+          git add dados.json
+          # Só faz commit se houver mudança
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Atualizando dados históricos [skip ci]" && git push)
