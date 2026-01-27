@@ -1,7 +1,7 @@
 name: Alerta de Ouro
 on:
   schedule:
-    - cron: '0 13-23 * * *' # Isso roda de hora em hora das 10h às 20h (Brasília)
+    - cron: '0 13,18,23 * * *' # Isso roda de hora em hora das 10h às 20h (Brasília)
   workflow_dispatch:
 jobs:
   run:
