@@ -1,16 +1,29 @@
-name: Alerta de Ouro
+name: Alerta de Ouro JS
 on:
   schedule:
-    - cron: '0 13,18,23 * * *' # Isso roda de hora em hora das 10h às 20h (Brasília)
+    # Horários UTC: 13h, 18h, 23h
+    # Equivalente BRT: 10h, 15h, 20h
+    - cron: '0 13,18,23 * * *'
   workflow_dispatch:
+
 jobs:
-  run:
+  run-monitor:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - run: pip install requests
-      - env:
+      - name: Baixar código
+        uses: actions/checkout@v3
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Instalar dependências
+        run: npm install axios
+
+      - name: Executar Monitor
+        env:
           GOLD_API_KEY: ${{ secrets.GOLD_API_KEY }}
           PUSH_USER: ${{ secrets.PUSH_USER }}
           PUSH_TOKEN: ${{ secrets.PUSH_TOKEN }}
-        run: python monitor.py
+        run: node monitor.js
