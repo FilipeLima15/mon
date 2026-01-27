@@ -1,4 +1,4 @@
-name: Alerta de Ouro JS
+name: Alerta
 on:
   schedule:
     - cron: '0 13,18,23 * * *' # 10h, 15h, 20h BRT
