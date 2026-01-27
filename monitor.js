@@ -96,7 +96,7 @@ function dataLegivel(dateStr) {
         if (precoOntem > 0) {
             const varOntem = (precoAgora / precoOntem) - 1;
             if (varOntem <= -0.03) {
-                tituloFinal = "Oportunidade";
+                tituloFinal = "Analisar";
                 mensagemFinal += `\n🚨 Queda diária: ${(varOntem*100).toFixed(1)}%`;
                 mensagemFinal += `\n(Ontem: ${precoOntem.toFixed(2)})`;
             }
@@ -123,7 +123,7 @@ function dataLegivel(dateStr) {
             if (refPreco > 0) {
                 const var3d = (precoAgora / refPreco) - 1;
                 if (var3d <= -0.03) {
-                    tituloFinal = "Oportunidade (3d)";
+                    tituloFinal = "Analisar (3d)";
                     mensagemFinal += `\n📉 Ciclo 3 Dias: ${(var3d*100).toFixed(1)}%`;
                 }
             }
