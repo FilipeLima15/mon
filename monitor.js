@@ -10,9 +10,7 @@ const PUSH_TOKEN = process.env.PUSH_TOKEN ? process.env.PUSH_TOKEN.trim() : "";
 
 // --- FUNÇÕES AUXILIARES ---
 async function buscarPreco() {
-    // Apenas URL base, sem data específica
     const url = "https://www.goldapi.io/api/XAU/USD";
-    
     try {
         const response = await axios.get(url, { headers: { "x-access-token": GOLD_API_KEY } });
         return response.data.price;
@@ -34,14 +32,18 @@ async function enviarPush(titulo, mensagem) {
 
 function carregarDados() {
     if (fs.existsSync(ARQUIVO_DADOS)) {
-        return JSON.parse(fs.readFileSync(ARQUIVO_DADOS, 'utf8'));
+        const dados = JSON.parse(fs.readFileSync(ARQUIVO_DADOS, 'utf8'));
+        // Garante que a lista de histórico exista (para versões antigas do arquivo)
+        if (!dados.historico) dados.historico = [];
+        return dados;
     }
     return {
         ultima_verificacao_3dias: "20000101",
         preco_referencia_3dias: 0,
         preco_segunda_passada: 0,
         data_segunda_passada: "",
-        preco_ultimo_fechamento: 0
+        preco_ultimo_fechamento: 0,
+        historico: [] // <--- AQUI ESTÁ A SUA LISTA INFINITA
     };
 }
 
@@ -51,6 +53,10 @@ function salvarDados(dados) {
 
 function formatarData(date) {
     return date.toISOString().split('T')[0].replace(/-/g, ''); // YYYYMMDD
+}
+
+function formatarDataBonita(date) {
+    return date.toISOString().split('T')[0]; // YYYY-MM-DD
 }
 
 function dataLegivel(dateStr) {
@@ -66,15 +72,13 @@ function dataLegivel(dateStr) {
     const horaAtual = agoraBr.getUTCHours();
     const diaSemana = agoraBr.getDay(); // 0=Dom, 1=Seg...
     const hojeStr = formatarData(agoraBr);
+    const dataLog = formatarDataBonita(agoraBr);
 
     console.log(`Hora BR: ${horaAtual}h | Data: ${hojeStr}`);
 
-    // --- DEFINIÇÃO DA JANELA DA MANHÃ ---
-    // Se rodar entre 10h e 12h (ex: 10:00, 11:30, 12:59), considera como execução matinal.
-    // Isso corrige o problema de atrasos na fila do GitHub.
+    // Janela de execução da manhã (10h até 12h) para driblar atrasos do GitHub
     const isManha = (horaAtual >= 10 && horaAtual <= 12);
 
-    // ÚNICA CHAMADA DE API DO SCRIPT
     const precoAgora = await buscarPreco();
     
     if (!precoAgora) {
@@ -89,17 +93,26 @@ function dataLegivel(dateStr) {
 
     // A. MENSAGEM BÁSICA
     mensagemFinal += `${precoAgora.toFixed(2)}`;
-    
-    // Se NÃO for de manhã (tarde/noite), adiciona o horário na mensagem
     if (!isManha) mensagemFinal += ` às ${horaAtual}h`;
 
-    // --- BLOCO DA MANHÃ (Janela de 10h às 12h) ---
+    // --- BLOCO DA MANHÃ (Executa e Salva Dados) ---
     if (isManha) {
-        console.log("Janela da manhã detectada. Executando análises...");
+        console.log("Janela da manhã detectada. Atualizando histórico...");
+
+        // 1. ADICIONAR AO HISTÓRICO INFINITO
+        // Verifica se já não salvou hoje para não duplicar se rodar 2x na mesma manhã
+        const jaSalvouHoje = dados.historico.some(h => h.data === dataLog);
+        if (!jaSalvouHoje) {
+            dados.historico.push({
+                data: dataLog,
+                valor: precoAgora,
+                dia_semana: diaSemana
+            });
+            console.log("Adicionado ao histórico infinito.");
+        }
         
-        // B. COMPARAÇÃO COM ONTEM
+        // 2. COMPARAÇÃO COM ONTEM
         const precoOntem = dados.preco_ultimo_fechamento || 0;
-        
         if (precoOntem > 0) {
             const varOntem = (precoAgora / precoOntem) - 1;
             if (varOntem <= -0.03) {
@@ -109,7 +122,7 @@ function dataLegivel(dateStr) {
             }
         }
 
-        // C. VERIFICAÇÃO DE 3 EM 3 DIAS
+        // 3. CICLO DE 3 DIAS
         const ano = parseInt(dados.ultima_verificacao_3dias.substring(0, 4));
         const mes = parseInt(dados.ultima_verificacao_3dias.substring(4, 6)) - 1;
         const dia = parseInt(dados.ultima_verificacao_3dias.substring(6, 8));
@@ -121,9 +134,7 @@ function dataLegivel(dateStr) {
         const diffDias = Math.ceil(diffTempo / (1000 * 60 * 60 * 24));
 
         if (diffDias >= 3) {
-            console.log(`Executando ciclo 3 dias (Passaram ${diffDias} dias)`);
             const refPreco = dados.preco_referencia_3dias || precoAgora;
-            
             if (refPreco > 0) {
                 const var3d = (precoAgora / refPreco) - 1;
                 if (var3d <= -0.03) {
@@ -131,15 +142,13 @@ function dataLegivel(dateStr) {
                     mensagemFinal += `\n📉 Ciclo 3 Dias: ${(var3d*100).toFixed(1)}%`;
                 }
             }
-
             dados.ultima_verificacao_3dias = hojeStr;
             dados.preco_referencia_3dias = precoAgora;
             dadosAlterados = true;
         }
 
-        // D. RELATÓRIO DE SEGUNDA-FEIRA
+        // 4. RELATÓRIO DE SEGUNDA-FEIRA
         if (diaSemana === 1) { 
-            console.log("Executando relatório semanal...");
             const refSegunda = dados.preco_segunda_passada || 0;
             const dataRef = dados.data_segunda_passada;
 
@@ -150,23 +159,20 @@ function dataLegivel(dateStr) {
                 mensagemFinal += `\n\n📅 Semanal (${dataLegivel(dataRef)}):`;
                 mensagemFinal += `\n${simbolo}${(varSemana*100).toFixed(1)}% (Era: ${refSegunda.toFixed(2)})`;
             }
-
             dados.preco_segunda_passada = precoAgora;
             dados.data_segunda_passada = hojeStr;
             dadosAlterados = true;
         }
 
-        // IMPORTANTE: Salva o preço de hoje como referência para amanhã
+        // Atualiza referência de "Ontem"
         dados.preco_ultimo_fechamento = precoAgora;
         dadosAlterados = true;
     }
 
-    // Envia Push
     await enviarPush(tituloFinal, mensagemFinal);
 
-    // Salva JSON se houve mudança
     if (dadosAlterados) {
         salvarDados(dados);
-        console.log("Dados salvos com sucesso.");
+        console.log("Dados salvos no JSON.");
     }
 })();
