@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write  # <--- PERMISSÃO CRÍTICA PARA SALVAR O JSON
+  contents: write  
 
 jobs:
   run-monitor:
