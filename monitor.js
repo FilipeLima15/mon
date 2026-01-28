@@ -10,7 +10,7 @@ const PUSH_TOKEN = process.env.PUSH_TOKEN ? process.env.PUSH_TOKEN.trim() : "";
 
 // --- FUNÇÕES AUXILIARES ---
 async function buscarPreco() {
-    // Apenas URL base, sem data específica (para economizar requisições históricas)
+    // Apenas URL base, sem data específica
     const url = "https://www.goldapi.io/api/XAU/USD";
     
     try {
@@ -36,13 +36,12 @@ function carregarDados() {
     if (fs.existsSync(ARQUIVO_DADOS)) {
         return JSON.parse(fs.readFileSync(ARQUIVO_DADOS, 'utf8'));
     }
-    // Estrutura inicial se o arquivo não existir
     return {
         ultima_verificacao_3dias: "20000101",
         preco_referencia_3dias: 0,
         preco_segunda_passada: 0,
         data_segunda_passada: "",
-        preco_ultimo_fechamento: 0 // Novo campo para evitar chamar API histórica
+        preco_ultimo_fechamento: 0
     };
 }
 
@@ -70,6 +69,11 @@ function dataLegivel(dateStr) {
 
     console.log(`Hora BR: ${horaAtual}h | Data: ${hojeStr}`);
 
+    // --- DEFINIÇÃO DA JANELA DA MANHÃ ---
+    // Se rodar entre 10h e 12h (ex: 10:00, 11:30, 12:59), considera como execução matinal.
+    // Isso corrige o problema de atrasos na fila do GitHub.
+    const isManha = (horaAtual >= 10 && horaAtual <= 12);
+
     // ÚNICA CHAMADA DE API DO SCRIPT
     const precoAgora = await buscarPreco();
     
@@ -79,18 +83,21 @@ function dataLegivel(dateStr) {
     }
 
     let mensagemFinal = "";
-    let tituloFinal = (horaAtual === 10) ? "C.10h" : "C.A";
+    let tituloFinal = isManha ? "C.10h" : "C.A";
     let dados = carregarDados();
     let dadosAlterados = false;
 
     // A. MENSAGEM BÁSICA
     mensagemFinal += `${precoAgora.toFixed(2)}`;
-    if (horaAtual !== 10) mensagemFinal += ` às ${horaAtual}h`;
+    
+    // Se NÃO for de manhã (tarde/noite), adiciona o horário na mensagem
+    if (!isManha) mensagemFinal += ` às ${horaAtual}h`;
 
-    // --- BLOCO DAS 10H DA MANHÃ ---
-    if (horaAtual === 10) {
+    // --- BLOCO DA MANHÃ (Janela de 10h às 12h) ---
+    if (isManha) {
+        console.log("Janela da manhã detectada. Executando análises...");
         
-        // B. COMPARAÇÃO COM ONTEM (Usando JSON, sem gastar API)
+        // B. COMPARAÇÃO COM ONTEM
         const precoOntem = dados.preco_ultimo_fechamento || 0;
         
         if (precoOntem > 0) {
@@ -103,14 +110,11 @@ function dataLegivel(dateStr) {
         }
 
         // C. VERIFICAÇÃO DE 3 EM 3 DIAS
-        // Converte string YYYYMMDD para Date
         const ano = parseInt(dados.ultima_verificacao_3dias.substring(0, 4));
         const mes = parseInt(dados.ultima_verificacao_3dias.substring(4, 6)) - 1;
         const dia = parseInt(dados.ultima_verificacao_3dias.substring(6, 8));
         const ultimaData3d = new Date(ano, mes, dia);
 
-        // Calcula diferença em dias
-        // Zeramos as horas para comparar apenas as datas
         const d1 = new Date(agoraBr.getFullYear(), agoraBr.getMonth(), agoraBr.getDate());
         const d2 = new Date(ultimaData3d.getFullYear(), ultimaData3d.getMonth(), ultimaData3d.getDate());
         const diffTempo = d1 - d2;
@@ -128,7 +132,6 @@ function dataLegivel(dateStr) {
                 }
             }
 
-            // Atualiza referência
             dados.ultima_verificacao_3dias = hojeStr;
             dados.preco_referencia_3dias = precoAgora;
             dadosAlterados = true;
@@ -153,7 +156,7 @@ function dataLegivel(dateStr) {
             dadosAlterados = true;
         }
 
-        // IMPORTANTE: Salva o preço de hoje como "ontem" para a execução de amanhã
+        // IMPORTANTE: Salva o preço de hoje como referência para amanhã
         dados.preco_ultimo_fechamento = precoAgora;
         dadosAlterados = true;
     }
@@ -164,6 +167,6 @@ function dataLegivel(dateStr) {
     // Salva JSON se houve mudança
     if (dadosAlterados) {
         salvarDados(dados);
-        console.log("Dados salvos.");
+        console.log("Dados salvos com sucesso.");
     }
 })();
