@@ -43,7 +43,12 @@
       "data": "2026-02-05",
       "valor": 4833.89,
       "dia_semana": 4
+    },
+    {
+      "data": "2026-02-06",
+      "valor": 4919.23,
+      "dia_semana": 5
     }
   ],
-  "preco_ultimo_fechamento": 4833.89
+  "preco_ultimo_fechamento": 4919.23
 }
