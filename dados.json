@@ -1,8 +1,8 @@
 {
   "ultima_verificacao_3dias": "20260222",
   "preco_referencia_3dias": 5107.46,
-  "preco_segunda_passada": 4994.64,
-  "data_segunda_passada": "20260216",
+  "preco_segunda_passada": 5164.195,
+  "data_segunda_passada": "20260223",
   "historico": [
     {
       "data": "2026-01-29",
@@ -128,7 +128,12 @@
       "data": "2026-02-22",
       "valor": 5107.46,
       "dia_semana": 0
+    },
+    {
+      "data": "2026-02-23",
+      "valor": 5164.195,
+      "dia_semana": 1
     }
   ],
-  "preco_ultimo_fechamento": 5107.46
+  "preco_ultimo_fechamento": 5164.195
 }
