@@ -383,7 +383,12 @@
       "data": "2026-04-14",
       "valor": 4800.07,
       "dia_semana": 2
+    },
+    {
+      "data": "2026-04-15",
+      "valor": 4817.45,
+      "dia_semana": 3
     }
   ],
-  "preco_ultimo_fechamento": 4800.07
+  "preco_ultimo_fechamento": 4817.45
 }
