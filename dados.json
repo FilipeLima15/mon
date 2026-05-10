@@ -503,6 +503,11 @@
       "data": "2026-05-09",
       "valor": 4715.03,
       "dia_semana": 6
+    },
+    {
+      "data": "2026-05-10",
+      "valor": 4715.03,
+      "dia_semana": 0
     }
   ],
   "preco_ultimo_fechamento": 4715.03
