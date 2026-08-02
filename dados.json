@@ -733,6 +733,11 @@
       "data": "2026-08-01",
       "valor": 4043.21,
       "dia_semana": 6
+    },
+    {
+      "data": "2026-08-02",
+      "valor": 4043.21,
+      "dia_semana": 0
     }
   ],
   "preco_ultimo_fechamento": 4043.21
